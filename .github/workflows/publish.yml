@@ -1,4 +1,4 @@
-name: Build and verify autonomous diagnostics
+name: Build and verify sustained GPU calibration
 on:
   workflow_dispatch:
 permissions:
@@ -9,19 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:autonomous-20261005
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:calibration-20261006
     steps:
       - name: Download approved diagnostic build inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download autonomous-20261005 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime.py
-          echo "0696330f70871fd0014c7c969ec70902be9582a2047e2287c0584320296f33b8  build-context.tar.gz" | sha256sum -c -
-          echo "3dd1a786ed3356a2cc23427e271ddc6912e483612a3672975e66e2dd25a7d91c  smoke_runtime.py" | sha256sum -c -
+          gh release download calibration-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime.py
+          echo "448e505d48e22fc91b56ca9eb0cbfa441a4996b7f5e0fb42f2a1538779186b5c  build-context.tar.gz" | sha256sum -c -
+          echo "4a1f08fd1abad4b62cf1752d4d55bab490e6bfcfdac3a0a9cdc7eb176870f581  smoke_runtime.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
       - name: Build runtime with OpenSSH
-        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.runtime -t "$IMAGE" context
+        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.calibration -t "$IMAGE" context
       - name: Verify SSH and autonomous archive without GPU or HTTP access
         run: python3 smoke_runtime.py "$IMAGE"
       - name: Publish verified runtime
