@@ -1,0 +1,30 @@
+name: Publish prebuilt diagnostic image
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download published archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download runtime-20261005 --repo lazarevdmitry92/miner-diagnostics-image --pattern image.tar
+      - name: Verify archive and import
+        run: |
+          echo "969fa272e34c9f06df9d3240bae067de5168b01cb5d8776eb455fb53dae60909  image.tar" | sha256sum -c -
+          docker load -i image.tar
+          docker tag sha256:41374588197a3593f6af8fdf554d17865f9700e7f241404d00a1b5568aac7f5f ghcr.io/lazarevdmitry92/miner-diagnostics-image:runtime-20261005
+      - name: Smoke check packaged Python and binaries
+        run: |
+          docker run --rm ghcr.io/lazarevdmitry92/miner-diagnostics-image:runtime-20261005 --help
+          docker run --rm --entrypoint sh ghcr.io/lazarevdmitry92/miner-diagnostics-image:runtime-20261005 -c '/opt/diagnostics/gpu_diagnostic --help && /opt/diagnostics/gpu_shared_diagnostic --help'
+      - name: Publish
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u lazarevdmitry92 --password-stdin
+          docker push ghcr.io/lazarevdmitry92/miner-diagnostics-image:runtime-20261005
