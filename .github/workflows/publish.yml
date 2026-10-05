@@ -1,4 +1,4 @@
-name: Publish prebuilt diagnostic image
+name: Build and verify autonomous diagnostics
 on:
   workflow_dispatch:
 permissions:
@@ -6,22 +6,33 @@ permissions:
   packages: write
 jobs:
   publish:
-    runs-on: [self-hosted, miner-image-publisher-20261005]
-    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:autonomous-20261005
     steps:
-      - name: Download and verify archive
+      - name: Download approved diagnostic build inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fL --max-time 120 https://github.com/lazarevdmitry92/miner-diagnostics-image/releases/download/runtime-20261005/image.tar -o image.tar
-          echo "969fa272e34c9f06df9d3240bae067de5168b01cb5d8776eb455fb53dae60909  image.tar" | sha256sum -c -
-      - name: Publish verified archive
+          gh release download autonomous-20261005 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime.py
+          echo "0696330f70871fd0014c7c969ec70902be9582a2047e2287c0584320296f33b8  build-context.tar.gz" | sha256sum -c -
+          echo "3dd1a786ed3356a2cc23427e271ddc6912e483612a3672975e66e2dd25a7d91c  smoke_runtime.py" | sha256sum -c -
+          mkdir context
+          tar xzf build-context.tar.gz -C context
+      - name: Build runtime with OpenSSH
+        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.runtime -t "$IMAGE" context
+      - name: Verify SSH and autonomous archive without GPU or HTTP access
+        run: python3 smoke_runtime.py "$IMAGE"
+      - name: Publish verified runtime
         env:
           REGISTRY_TOKEN: ${{ github.token }}
-          DOCKER_CONFIG: ${{ runner.temp }}/diagnostic-registry-auth
         run: |
-          set -eu
-          CRANE=/home/aura/pilots/miner_diagnostics_build_20261005/publisher/crane
-          mkdir -p "$DOCKER_CONFIG"
-          trap 'rm -f "$DOCKER_CONFIG/config.json"' EXIT
-          printf '%s' "$REGISTRY_TOKEN" | "$CRANE" auth login ghcr.io -u lazarevdmitry92 --password-stdin
-          "$CRANE" push image.tar ghcr.io/lazarevdmitry92/miner-diagnostics-image:runtime-20261005
-          "$CRANE" digest ghcr.io/lazarevdmitry92/miner-diagnostics-image:runtime-20261005
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u lazarevdmitry92 --password-stdin
+          docker push "$IMAGE"
+          docker inspect "$IMAGE" --format '{{json .RepoDigests}}'
+      - name: Retain verification result
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-smoke
+          path: runtime-smoke.json
