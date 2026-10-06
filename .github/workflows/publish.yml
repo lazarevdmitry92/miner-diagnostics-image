@@ -1,4 +1,4 @@
-name: Build and verify targeted Pearl mechanism diagnostic pilot
+name: Build and verify device model v3 diagnostic pilot
 on:
   workflow_dispatch:
 permissions:
@@ -7,25 +7,25 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
-      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-mechanism-20261006
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:model-v3-20261006
     steps:
       - name: Download approved diagnostic build inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download pearl-mechanism-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v2.py
-          echo "cc3fc8c743497035c186d4dddca074119300a3f16e5f1aebc7da7baf3e69fbb3  build-context.tar.gz" | sha256sum -c -
-          echo "5288b07722f160e91c13ca25aac9d5230048268db532799a91a403de91a39d6a  smoke_runtime_v2.py" | sha256sum -c -
+          gh release download model-v3-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v3.py
+          echo "5ade3aa5853c530458de25a0ccf9b9a5fc5add87bdd400c108226449d555fd21  build-context.tar.gz" | sha256sum -c -
+          echo "bb73121a888dc5e71e6d0bdad0330558ba290a0a79d67c70a0d0eb744d68d782  smoke_runtime_v3.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
       - name: Build runtime with OpenSSH
-        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-mechanism -t "$IMAGE" context
+        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.device-model -t "$IMAGE" context
       - name: Verify SSH and autonomous archive without GPU or HTTP access
         run: |
-          python3 smoke_runtime_v2.py "$IMAGE" geometry
-          python3 smoke_runtime_v2.py "$IMAGE" dispatch
+          python3 smoke_runtime_v3.py "$IMAGE" profile-wide
+          python3 smoke_runtime_v3.py "$IMAGE" mapping-low
       - name: Publish verified runtime
         env:
           REGISTRY_TOKEN: ${{ github.token }}
