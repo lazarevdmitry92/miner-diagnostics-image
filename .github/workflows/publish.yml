@@ -15,8 +15,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download model-v3-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v3.py
-          echo "5ade3aa5853c530458de25a0ccf9b9a5fc5add87bdd400c108226449d555fd21  build-context.tar.gz" | sha256sum -c -
+          gh release download model-v3-20261006-r2 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v3.py
+          echo "6ab3855844857548205565f49ee0bead0f13ef1df81856423e1fda46d151efe8  build-context.tar.gz" | sha256sum -c -
           echo "bb73121a888dc5e71e6d0bdad0330558ba290a0a79d67c70a0d0eb744d68d782  smoke_runtime_v3.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
