@@ -1,4 +1,4 @@
-name: Build and verify Pearl stage baseline
+name: Build and verify randomized Pearl diagnostic pilot
 on:
   workflow_dispatch:
 permissions:
@@ -9,19 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-stage-20261006
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-pilot-20261006
     steps:
       - name: Download approved diagnostic build inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download pearl-stage-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v2.py
-          echo "53757532a656ff15be8f7e3b148e1acba21ba50aa8c8e0d2251c335bf35a741c  build-context.tar.gz" | sha256sum -c -
+          gh release download pearl-pilot-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v2.py
+          echo "ebd7a8cdd5bc64670743d6f74b625269fe089dc3637e8e12f6b56b34f3145aa9  build-context.tar.gz" | sha256sum -c -
           echo "c698f2dde73cdaf349889acf0c9023ac14a417b4bdb683cd76ea472b71526c33  smoke_runtime_v2.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
       - name: Build runtime with OpenSSH
-        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-stage -t "$IMAGE" context
+        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-pilot -t "$IMAGE" context
       - name: Verify SSH and autonomous archive without GPU or HTTP access
         run: python3 smoke_runtime_v2.py "$IMAGE"
       - name: Publish verified runtime
