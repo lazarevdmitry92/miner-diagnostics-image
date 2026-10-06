@@ -1,4 +1,4 @@
-name: Build and verify device model bounded r5 diagnostic pilot
+name: Build and verify device model bounded r6 diagnostic pilot
 on:
   workflow_dispatch:
 permissions:
@@ -9,19 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:model-r5-20261006
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:model-r6-20261006
     steps:
       - name: Download approved diagnostic build inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download model-r5-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v3.py
-          echo "f60e39b670052d1b818ead7c70d371cf98080d925b4d377b024bd1444a0309a7  build-context.tar.gz" | sha256sum -c -
+          gh release download model-r6-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v3.py
+          echo "b053f01f839c1ffdb2e091ce8e89dfa36379652b7bbc5509e2190a70e0d72726  build-context.tar.gz" | sha256sum -c -
           echo "bb73121a888dc5e71e6d0bdad0330558ba290a0a79d67c70a0d0eb744d68d782  smoke_runtime_v3.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
       - name: Build runtime with OpenSSH
-        run: docker build --platform linux/amd64 -f context/runs/device-model-r5-20261006/Dockerfile -t "$IMAGE" context
+        run: docker build --platform linux/amd64 -f context/runs/device-model-r6-20261006/Dockerfile -t "$IMAGE" context
       - name: Verify SSH and autonomous archive without GPU or HTTP access
         run: |
           python3 smoke_runtime_v3.py "$IMAGE" profile-wide
