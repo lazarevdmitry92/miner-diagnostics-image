@@ -1,4 +1,4 @@
-name: Build and verify sustained GPU calibration
+name: Build and verify Pearl stage baseline
 on:
   workflow_dispatch:
 permissions:
@@ -9,19 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:calibration-20261006
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-stage-20261006
     steps:
       - name: Download approved diagnostic build inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download calibration-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime.py
-          echo "448e505d48e22fc91b56ca9eb0cbfa441a4996b7f5e0fb42f2a1538779186b5c  build-context.tar.gz" | sha256sum -c -
-          echo "4a1f08fd1abad4b62cf1752d4d55bab490e6bfcfdac3a0a9cdc7eb176870f581  smoke_runtime.py" | sha256sum -c -
+          gh release download pearl-stage-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime.py
+          echo "53757532a656ff15be8f7e3b148e1acba21ba50aa8c8e0d2251c335bf35a741c  build-context.tar.gz" | sha256sum -c -
+          echo "c314c64aa55cb7104a65f9d9e474a852edcd86adbbf8b79c6390e153c961f031  smoke_runtime.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
       - name: Build runtime with OpenSSH
-        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.calibration -t "$IMAGE" context
+        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-stage -t "$IMAGE" context
       - name: Verify SSH and autonomous archive without GPU or HTTP access
         run: python3 smoke_runtime.py "$IMAGE"
       - name: Publish verified runtime
