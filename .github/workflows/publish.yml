@@ -1,4 +1,4 @@
-name: Build and verify randomized Pearl diagnostic pilot
+name: Build and verify targeted Pearl mechanism diagnostic pilot
 on:
   workflow_dispatch:
 permissions:
@@ -9,21 +9,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-batchfix-20261006
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-mechanism-20261006
     steps:
       - name: Download approved diagnostic build inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download pearl-batchfix-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v2.py
-          echo "6542c7e063362aff439cda47f77e0ca2338ff3d3daa907dbfdcf0d9af7212b70  build-context.tar.gz" | sha256sum -c -
-          echo "c698f2dde73cdaf349889acf0c9023ac14a417b4bdb683cd76ea472b71526c33  smoke_runtime_v2.py" | sha256sum -c -
+          gh release download pearl-mechanism-20261006 --repo lazarevdmitry92/miner-diagnostics-image --pattern build-context.tar.gz --pattern smoke_runtime_v2.py
+          echo "cc3fc8c743497035c186d4dddca074119300a3f16e5f1aebc7da7baf3e69fbb3  build-context.tar.gz" | sha256sum -c -
+          echo "5288b07722f160e91c13ca25aac9d5230048268db532799a91a403de91a39d6a  smoke_runtime_v2.py" | sha256sum -c -
           mkdir context
           tar xzf build-context.tar.gz -C context
       - name: Build runtime with OpenSSH
-        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-batchfix -t "$IMAGE" context
+        run: docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-mechanism -t "$IMAGE" context
       - name: Verify SSH and autonomous archive without GPU or HTTP access
-        run: python3 smoke_runtime_v2.py "$IMAGE"
+        run: |
+          python3 smoke_runtime_v2.py "$IMAGE" geometry
+          python3 smoke_runtime_v2.py "$IMAGE" dispatch
       - name: Publish verified runtime
         env:
           REGISTRY_TOKEN: ${{ github.token }}
@@ -35,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: runtime-smoke
-          path: runtime-smoke.json
+          path: runtime-smoke-*.json
