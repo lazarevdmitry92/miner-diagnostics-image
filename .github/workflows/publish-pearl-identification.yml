@@ -1,0 +1,40 @@
+name: Publish Pearl identification diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download approved runtime-only context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download pearl-identification-v1-20261007 --repo lazarevdmitry92/miner-diagnostics-image --pattern diagnostic-context.tar
+          echo "f9bfc28694cc3e8d6017e92b3344637371b4038b8ecf4d84324894b2a6ba2d9b  diagnostic-context.tar" | sha256sum -c -
+          mkdir context
+          tar xf diagnostic-context.tar -C context
+      - name: Build and verify four role images without GPU
+        run: |
+          for PEARL_ROLE in A B D E; do
+            PEARL_TAG=$(printf '%s' "$PEARL_ROLE" | tr '[:upper:]' '[:lower:]')
+            PEARL_IMAGE="ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-identification-v1-20261007-$PEARL_TAG"
+            docker build --platform linux/amd64 --build-arg ROLE="$PEARL_ROLE" -f context/bench/Dockerfile.pearl-identification -t "$PEARL_IMAGE" context
+            docker run --rm --entrypoint python3 "$PEARL_IMAGE" /app/tools/run_pearl_identification.py --help
+            docker run --rm --entrypoint sh "$PEARL_IMAGE" -c 'ssh-keygen -A && /usr/sbin/sshd -t -f /etc/diagnostics/sshd_config'
+            docker run --rm --entrypoint /opt/diagnostics/pearl_identification_gemm "$PEARL_IMAGE" --self-test
+            docker run --rm --entrypoint /opt/diagnostics/pearl_identification_runtime "$PEARL_IMAGE" --self-test
+          done
+      - name: Publish approved runtime images
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u lazarevdmitry92 --password-stdin
+          for PEARL_ROLE in a b d e; do
+            PEARL_IMAGE="ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-identification-v1-20261007-$PEARL_ROLE"
+            docker push "$PEARL_IMAGE"
+            docker inspect "$PEARL_IMAGE" --format '{{json .RepoDigests}}'
+          done
