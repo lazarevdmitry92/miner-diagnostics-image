@@ -1,0 +1,34 @@
+name: Publish fixed Pearl fragment diagnostic
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE: ghcr.io/lazarevdmitry92/miner-diagnostics-image:pearl-fragment-b00-20261007
+    steps:
+      - name: Download approved runtime-only context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download pearl-fragment-b00-20261007 --repo lazarevdmitry92/miner-diagnostics-image --pattern diagnostic-context.tar
+          echo "35e104d5b3e1e2d516589b9e77a244b117a5c232478743f7498644032ce2c726  diagnostic-context.tar" | sha256sum -c -
+          mkdir context
+          tar xf diagnostic-context.tar -C context
+      - name: Build and smoke without GPU
+        run: |
+          docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-fragment-runtime --build-arg FRAGMENT_ARTIFACT_DIR=runs/pearl-fragment-runtime-build -t "$IMAGE" context
+          docker run --rm --entrypoint /opt/diagnostics/pearl_fragment_runtime "$IMAGE" --help
+          docker run --rm --entrypoint python3 "$IMAGE" /app/tools/run_pearl_fragment_runtime.py --help
+          docker run --rm --entrypoint sh "$IMAGE" -c 'ssh-keygen -A && /usr/sbin/sshd -t -f /etc/diagnostics/sshd_config'
+      - name: Publish diagnostic runtime
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u lazarevdmitry92 --password-stdin
+          docker push "$IMAGE"
+          docker inspect "$IMAGE" --format '{{json .RepoDigests}}'
