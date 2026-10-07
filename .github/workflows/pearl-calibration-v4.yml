@@ -23,7 +23,7 @@ jobs:
         run: |
           docker build --platform linux/amd64 -f context/bench/Dockerfile.pearl-calibration -t "$IMAGE" context
           docker run --rm --entrypoint /opt/diagnostics/pearl_calibration_runtime "$IMAGE" --help
-          docker run --rm --entrypoint python3 "$IMAGE" /app/tools/run_pearl_calibration_runtime.py --help
+          docker run --rm --entrypoint python3 "$IMAGE" /app/tools/run_pearl_calibration.py --help
           docker run --rm --entrypoint sh "$IMAGE" -c 'ssh-keygen -A && /usr/sbin/sshd -t -f /etc/diagnostics/sshd_config'
           docker run --rm --entrypoint /opt/diagnostics/pearl_calibration_runtime "$IMAGE" --describe
           docker run --rm --entrypoint /opt/diagnostics/pearl_calibration_runtime "$IMAGE" --self-test
